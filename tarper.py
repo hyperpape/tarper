@@ -45,10 +45,14 @@ def words(file):
             for word in line.split(' .;\(\){}[]'):
                 yield word
 
+def sort_by_size(path):
+    files = candidate_files(path)
+    return sorted(list(files), key=lambda f: os.path.getsize(os.path.join(f[0], f[1])))
+
 if __name__ == '__main__':
     target_archive = sys.argv[1]
     src = "/home/justin/Downloads/StringMatching"
     make_archive(target_archive + '.tar', random_order(src))
     make_archive(target_archive + 'subdir.tar', permute_within_directory(src))
     make_archive(target_archive + 'similar.tar', determine_similar_files(src))
-
+    make_archive(target_archive + 'bysize.tar', sort_by_size(src))
