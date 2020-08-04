@@ -83,7 +83,7 @@ def by_swapping_files(best_choice):
 
 if __name__ == '__main__':
     target_archive = sys.argv[1]
-    src = "/home/justin/Downloads/StringMatching"
+    src = sys.argv[2]
     make_archive(target_archive + '.tar', random_order(src))
     make_archive(target_archive + 'subdir.tar', permute_within_directory(src))
     make_archive(target_archive + 'byswappingperm.tar', by_swapping_with_permutation(src))
