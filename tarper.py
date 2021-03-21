@@ -317,5 +317,5 @@ if __name__ == '__main__':
     first = target_archive.endswith('1') or target_archive.endswith('1dup')
     extension = sys.argv[3]
 
-    runner = Runner(target_archive, src, first, extension, 50000)
-    runner.run(sys.argv[4])
+    runner = Runner(target_archive, src, first, extension, int(sys.argv[4]))
+    runner.run(sys.argv[5])
