@@ -6,7 +6,10 @@ import random
 import subprocess
 import sys
 import time
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
+
+from mcts import Node
+import pdb
 
 
 def candidate_files(path: str) -> Iterable[Tuple[str, str]]:
@@ -19,7 +22,7 @@ def to_files(pairs: Iterable[Tuple[str, str]]) -> List[str]:
     return [os.path.join(fp[0], fp[1]) for fp in pairs]
 
 
-def make_archive(name: str, files: Iterable[str], extension):
+def make_archive(name: str, files: Iterable[str], extension: str):
     first, *rest = files
     with open("output", "a") as f:
         if extension == ".gz":
@@ -33,7 +36,7 @@ def make_archive(name: str, files: Iterable[str], extension):
                 subprocess.call(["tar", "-rf", name, file], stderr=subprocess.DEVNULL)
             subprocess.run(["zstd", "-19", "--long", name])
         else:
-            raise ValueError("Unrecognized choice of compression")
+            raise ValueError("Unrecognized choice of compression: " + runner.extension)
 
 
 def permute_within_directory(path: str) -> Iterable[Tuple[str, str]]:
@@ -147,6 +150,7 @@ class Runner:
                 self, "swappingwithpermutation", self.by_swapping_with_permutation
             ),
             "random": ArchiveMethod(self, "random", self.by_random),
+            "mcts": ArchiveMethod(self, "mcts", self.by_mcts),
             "permutewithindirectory": ArchiveMethod(
                 self, "permutewithindirectory", self.by_permute_within_directory
             ),
@@ -260,7 +264,11 @@ class Runner:
                     print(msg, file=f)
         return best_choice
 
-    def compute_size(self, files, extension):
+    def compute_size(self, files: List[str], extension=None) -> int:
+        if extension is None:
+            extension = self.extension
+        if len(files) < 2:
+            print(files)
         target = self.workdir() + "/tmpfile.tar"
         make_archive(target, files, extension)
         file_name = target + extension
@@ -272,10 +280,51 @@ class Runner:
         files = to_files(candidate_files(self.src))
         return self.hill_climbing_with_probabilistic_replacement(files)
 
+    # Note that this is only very loosely inspired by mcts, not a faithful
+    # implementation
+    def by_mcts(self) -> List[str]:
+        files = to_files(candidate_files(self.src))
+        path_length = len(files)
+        tree = self.initialize_mcts(files)
+        for i in range(self.count):
+            if i % 100 == 0:
+                tree.prune_tree(5)
+                if i % 1000 == 0:
+                    print(f"iteration #{i}")
+            depth: int = 0
+            if i < self.count // 2:
+                node = tree.choose_path(5)
+            else:
+                depth = len(files) // (self.count // i)
+                # hacky: this will waste effort sometimes.
+                # better to do a real solution that focuses on interesting cases
+                if depth + 3 >= len(files):
+                    depth = len(files) - 3
+                node = tree.choose_path(5, forced_depth=depth)
+            path = node.new_path(files, node.path(), depth)
+            size = self.compute_size(path)
+            if size < tree.min:
+                print(i, size)
+            tree.update(path, size)
+        return files  # path of best node in the tree
+
+    def initialize_mcts(self, files: List[str]):
+        tree = Node()
+        for f in files:
+            for i in range(5):
+                remaining = [file for file in files if file is not f]
+                random.shuffle(remaining)
+                order = [f]
+                order.extend(remaining)
+                size = self.compute_size(order)
+                tree.update(order, size)
+                return tree
+
+
     def by_counted_iterations(self) -> List[str]:
         return self.by_swapping_count(to_files(candidate_files(self.src)))
 
-    def hill_climbing_with_probabilistic_replacement(self, files):
+    def hill_climbing_with_probabilistic_replacement(self, files: List[str]):
         state = OptState(files, self.compute_size(files, self.extension))
         with open("output", "a") as output_file:
             while True and state.iterations < self.count:
@@ -283,7 +332,7 @@ class Runner:
                     now = datetime.datetime.now()
                     msg = f"{now}, did iteration {state.iterations}"
                     print(msg, file=output_file)
-                best_candidate_size = None
+                best_candidate_size = sys.maxsize
                 for candidate_num in range(4):
                     state.iterations += 1
                     next_choice = list(state.current)
@@ -328,7 +377,7 @@ class OptState:
 
 
 class ArchiveMethod:
-    def __init__(self, runner, suffix, method):
+    def __init__(self, runner, suffix, method: Callable):
         self.runner = runner
         self.suffix = suffix
         self.method = method
@@ -336,7 +385,11 @@ class ArchiveMethod:
     def __call__(self):
         name = self.runner.target_archive + "_" + self.suffix
         files = self.method.__call__()
-        make_archive(name, files, self.runner.extension)
+        try:
+            make_archive(name, files, self.runner.extension)
+        except Exception:
+            print(files)
+            breakpoint()
 
 
 if __name__ == "__main__":
