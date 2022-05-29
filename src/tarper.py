@@ -138,10 +138,9 @@ def swap(files):
 
 
 class Runner:
-    def __init__(self, target_archive, src, first, extension, count):
+    def __init__(self, target_archive, src, extension, count):
         self.target_archive = target_archive
         self.src = src
-        self.first = first
         self.extension = extension
         self.count = count
         self.options = {
@@ -320,7 +319,6 @@ class Runner:
                 tree.update(order, size)
                 return tree
 
-
     def by_counted_iterations(self) -> List[str]:
         return self.by_swapping_count(to_files(candidate_files(self.src)))
 
@@ -392,11 +390,11 @@ class ArchiveMethod:
             breakpoint()
 
 
+# usage: tarper.py target_archive source_directory extension iteration_count key
 if __name__ == "__main__":
     target_archive = sys.argv[1]
     src = sys.argv[2]
-    first = target_archive.endswith("1") or target_archive.endswith("1dup")
     extension = sys.argv[3]
 
-    runner = Runner(target_archive, src, first, extension, int(sys.argv[4]))
+    runner = Runner(target_archive, src, extension, int(sys.argv[4]))
     runner.run(sys.argv[5])
