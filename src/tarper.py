@@ -5,6 +5,7 @@ import os
 import random
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
@@ -23,9 +24,17 @@ def to_files(pairs: Iterable[Tuple[str, str]]) -> List[str]:
 
 
 def make_archive(name: str, files: Iterable[str], extension: str):
+    """Make an archive from the files passed
+
+    name - the full path of the archive
+    files - the files to be included
+    extension - determines the type of archive, either ".gz" or ".zst"
+    """
     first, *rest = files
     with open("output", "a") as f:
         if extension == ".gz":
+            # TODO: was there some reason I only special cased one file?
+            # Seems slow...
             subprocess.call(["tar", "-cf", name, first], stderr=subprocess.DEVNULL)
             for file in rest:
                 subprocess.call(["tar", "-rf", name, file], stderr=subprocess.DEVNULL)
@@ -138,11 +147,13 @@ def swap(files):
 
 
 class Runner:
-    def __init__(self, target_archive, src, extension, count):
+    def __init__(self, target_archive, src, extension, count, debug=False):
         self.target_archive = target_archive
         self.src = src
         self.extension = extension
+        self.dir = tempfile.TemporaryDirectory()
         self.count = count
+        self.debug = debug
         self.options = {
             "swapping": ArchiveMethod(self, "swapping", self.by_swapping),
             "swappingwithpermutaion": ArchiveMethod(
@@ -172,7 +183,7 @@ class Runner:
         }
 
     def workdir(self):
-        return os.path.dirname(self.target_archive)
+        return self.dir.name
 
     def by_swapping(self) -> List[str]:
         files = to_files(candidate_files(self.src))
@@ -246,7 +257,8 @@ class Runner:
                 if i % 1000 == 0:
                     now = datetime.datetime.now()
                     msg = f"{now}, did iteration {i}"
-                    print(msg, file=f)
+                    if self.debug:
+                        print(msg, file=f)
             next_choice = list(best_choice)
             swap(next_choice)
             size = self.compute_size(next_choice, extension)
@@ -260,7 +272,8 @@ class Runner:
                 with open("output", "a") as f:
                     now = datetime.datetime.now()
                     msg = f"{now}, best_size={best_size} on iteration {i}"
-                    print(msg, file=f)
+                    if self.debug:
+                        print(msg, file=f)
         return best_choice
 
     def compute_size(self, files: List[str], extension=None) -> int:
@@ -286,6 +299,7 @@ class Runner:
         path_length = len(files)
         tree = self.initialize_mcts(files)
         for i in range(self.count):
+            # periodically prune tree and output progress
             if i % 100 == 0:
                 tree.prune_tree(5)
                 if i % 1000 == 0:
@@ -310,6 +324,7 @@ class Runner:
     def initialize_mcts(self, files: List[str]):
         tree = Node()
         for f in files:
+            # I think this exists to pre-seed the tree? 
             for i in range(5):
                 remaining = [file for file in files if file is not f]
                 random.shuffle(remaining)
@@ -329,7 +344,8 @@ class Runner:
                 if state.iterations % 1000 == 0:
                     now = datetime.datetime.now()
                     msg = f"{now}, did iteration {state.iterations}"
-                    print(msg, file=output_file)
+                    if self.debug:
+                        print(msg, file=output_file)
                 best_candidate_size = sys.maxsize
                 for candidate_num in range(4):
                     state.iterations += 1
@@ -348,13 +364,15 @@ class Runner:
                     state.current_size = best_candidate_size
                     now = datetime.datetime.now()
                     msg = f"{now}, best_size={state.best_size}, best_size_candidate={best_candidate_size}, current_size={state.current_size} on iteration {state.iterations}"
-                    print(msg, file=output_file)
+                    if self.debug:
+                        print(msg, file=output_file)
                 elif random.random() > 0.95:
                     state.current = best_candidate
                     state.current_size = best_candidate_size
                     now = datetime.datetime.now()
                     msg = f"{now}, switched randomly best_size={state.best_size}, best_size_candidate={best_candidate_size}, current_size={state.current_size} on iteration {state.iterations}"
-                    print(msg, file=output_file)
+                    if self.debug:
+                        print(msg, file=output_file)
         return state.best
 
     def run(self, arg):
@@ -375,6 +393,14 @@ class OptState:
 
 
 class ArchiveMethod:
+    """A method for creating an archive
+    runner -
+    suffix - the extension of the created archive
+    method - a method that returns a list of files from which to create the
+             archive. The method is responsible for doing the computation
+             that determines the file order.
+    """
+
     def __init__(self, runner, suffix, method: Callable):
         self.runner = runner
         self.suffix = suffix

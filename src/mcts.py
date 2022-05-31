@@ -7,6 +7,11 @@ from typing import List, Optional, Tuple
 
 
 class Node:
+    """
+    Stores data about a subtree of the full mcts tree. The Runner class
+    is responsible for doing the actual computations, files manipulation,
+    etc.
+    """
     def __init__(self):
         self.max = 0
         self.min = -1
@@ -15,14 +20,18 @@ class Node:
         self.children: DefaultDict[str, Node] = defaultdict(Node)
 
     def update(self, path: List[str], value) -> None:
+        """
+        Update the tree for a particular path, and value
+        """
         current = self
         had_update = False
         for i, key in enumerate(path):
             updated = current.update_value(value)
             if updated and not had_update:
                 had_update = True
-                # print(f"updating #{i} to {value}")
+                print(f"updating #{i} to {value}")
             child = current.children[key]
+            # initialize the child as it may be created from the default dict
             if not child.parent:
                 child.parent = current
                 child.key = key
@@ -30,6 +39,10 @@ class Node:
         current.update_value(value)
 
     def update_value(self, value) -> bool:
+        """
+        Updates the min/max of this node based on the value.
+        Returns True if the value was updated, False otherwise. 
+        """
         if self.max < value:
             self.max = value
         if self.min > value:
@@ -53,7 +66,6 @@ class Node:
         children = [elem for elem in self.children.values() if elem.min == self.min]
         if children:
             return random.choice(children)
-        breakpoint()
         return None
 
     def choose_child(self, ratio: float):  # -> Node:
@@ -95,6 +107,7 @@ class Node:
             for v in self.children.values():
                 v.prune_tree(count)
 
+    # currently never called, why? 
     def mutate(self) -> List[str]:
         if not self.parent:
             pass
