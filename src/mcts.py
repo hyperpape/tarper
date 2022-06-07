@@ -12,6 +12,7 @@ class Node:
     is responsible for doing the actual computations, files manipulation,
     etc.
     """
+
     def __init__(self):
         self.max = 0
         self.min = -1
@@ -41,7 +42,7 @@ class Node:
     def update_value(self, value) -> bool:
         """
         Updates the min/max of this node based on the value.
-        Returns True if the value was updated, False otherwise. 
+        Returns True if the value was updated, False otherwise??
         """
         if self.max < value:
             self.max = value
@@ -55,12 +56,22 @@ class Node:
     def choose_path(self, ratio: float, forced_depth: int = 0):  # -> Node:
         current = self
         for i in range(forced_depth):
-            child = self.best_child()
+            child = current.best_child()
             if child is None:
                 return current
+            current = child
         while current.children:
             current = current.choose_child(ratio)
         return current
+
+    def best_path(self) -> List[str]:
+        current = self
+        while True:
+            child = current.best_child()
+            if not child:
+                return current.path()
+            else:
+                current = child
 
     def best_child(self):  # -> Optional[Tuple[str, Node]]:
         children = [elem for elem in self.children.values() if elem.min == self.min]
@@ -86,6 +97,9 @@ class Node:
         return (1 / ratio) + factor
 
     def path(self) -> List[str]:
+        """
+        Return the path from the current node to the root of the tree.
+        """
         path = []
         current = self
         while current:
@@ -106,12 +120,6 @@ class Node:
                 self.children[k] = v
             for v in self.children.values():
                 v.prune_tree(count)
-
-    # currently never called, why? 
-    def mutate(self) -> List[str]:
-        if not self.parent:
-            pass
-        return []
 
     def new_path(
         self, files: List[str], path: List[str], forced_depth: int

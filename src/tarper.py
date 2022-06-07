@@ -317,14 +317,14 @@ class Runner:
             path = node.new_path(files, node.path(), depth)
             size = self.compute_size(path)
             if size < tree.min:
-                print(i, size)
+                print("new best ", i, size)
             tree.update(path, size)
-        return files  # path of best node in the tree
+        return tree.best_path()
 
     def initialize_mcts(self, files: List[str]):
         tree = Node()
+        tree.update(files, self.compute_size(files))
         for f in files:
-            # I think this exists to pre-seed the tree? 
             for i in range(5):
                 remaining = [file for file in files if file is not f]
                 random.shuffle(remaining)
