@@ -156,7 +156,7 @@ class Runner:
         self.debug = debug
         self.options = {
             "swapping": ArchiveMethod(self, "swapping", self.by_swapping),
-            "swappingwithpermutaion": ArchiveMethod(
+            "swappingwithpermutation": ArchiveMethod(
                 self, "swappingwithpermutation", self.by_swapping_with_permutation
             ),
             "random": ArchiveMethod(self, "random", self.by_random),
