@@ -322,18 +322,21 @@ class Runner:
             if size < tree.min:
                 print("new best ", i, size)
             tree.update(path, size)
+            tree.print_order(path, size)
         return tree.best_path()
 
     def initialize_mcts(self, files: List[str]):
         tree = Node()
+        tree.set_base_order(files)
         tree.update(files, self.compute_size(files))
         for i in range(512):
             order = files[:]
             for j in range(5):
                 swap(order)
-                size = self.compute_size(order)
-                tree.update(order, size)
-        print(f"tree size={tree.size()}")
+            size = self.compute_size(order)
+            tree.update(order, size)
+            tree.print_order(order, size)
+        print("initialized")
         return tree
 
     def by_counted_iterations(self) -> List[str]:

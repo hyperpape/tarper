@@ -17,6 +17,7 @@ class Node:
         self.max = 0
         self.min = -1
         self.key = None
+        self.base_order = {}
         self.parent = None
         self.children: DefaultDict[str, Node] = defaultdict(Node)
 
@@ -28,6 +29,14 @@ class Node:
             size += child.size()
         return size
 
+    def set_base_order(self, path: List[str]) -> None:
+        for i, key in enumerate(path):
+            self.base_order[key] = i
+
+    def print_order(self, path: List[str], size) -> None:
+        order = [self.base_order[key] for key in path]
+        print(str(order) + ": " + str(size))
+    
     def update(self, path: List[str], value) -> None:
         """
         Update the tree for a particular path, and value
