@@ -30,22 +30,25 @@ def make_archive(name: str, files: Iterable[str], extension: str):
     files - the files to be included
     extension - determines the type of archive, either ".gz" or ".zst"
     """
-    first, *rest = files
+
     with open("output", "a") as f:
         if extension == ".gz":
-            # TODO: was there some reason I only special cased one file?
-            # Seems slow...
-            subprocess.call(["tar", "-cf", name, first], stderr=subprocess.DEVNULL)
-            for file in rest:
-                subprocess.call(["tar", "-rf", name, file], stderr=subprocess.DEVNULL)
+            make_tar(name, files)
             subprocess.run(["gzip", name])
         elif extension == ".zst":
-            subprocess.call(["tar", "-cf", name, first], stderr=subprocess.DEVNULL)
-            for file in rest:
-                subprocess.call(["tar", "-rf", name, file], stderr=subprocess.DEVNULL)
+            make_tar(name, files)
             subprocess.run(["zstd", "-19", "--long", name])
         else:
             raise ValueError("Unrecognized choice of compression: " + runner.extension)
+
+
+def make_tar(name, files):
+    first, *rest = files
+    subprocess.call(["tar", "-cf", name, first], stderr=subprocess.DEVNULL)
+    for chunk in [files[x : x + 100] for x in range(0, len(files), 100)]:
+        args = ["tar", "-rf", name]
+        args.extend(chunk)
+    subprocess.call(args, stderr=subprocess.DEVNULL)
 
 
 def permute_within_directory(path: str) -> Iterable[Tuple[str, str]]:
