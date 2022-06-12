@@ -125,7 +125,7 @@ class Node:
             current = current.parent
         return list(reversed(path))
 
-    def prune_tree(self, count) -> None:
+    def prune_tree(self, count, depth = 0) -> None:
         values = sorted([v.min for (k, v) in self.children.items()])[:count]
         if values:
             boundary = values[-1]
@@ -136,7 +136,9 @@ class Node:
             for k, v in new_children.items():
                 self.children[k] = v
             for v in self.children.values():
-                v.prune_tree(count)
+                if depth <= 0:
+                    count = count - 1
+                v.prune_tree(max(count, 1), depth - 1)
 
     def new_path(
         self, files: List[str], path: List[str], forced_depth: int

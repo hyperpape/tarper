@@ -304,7 +304,10 @@ class Runner:
         for i in range(self.count):
             # periodically prune tree and output progress
             if i % 100 == 0:
-                tree.prune_tree(5)
+                if i == 0 or self.count // i > 2:
+                    tree.prune_tree(5, 0)
+                else:
+                    tree.prune_tree(5, len(files) // (self.count // i))
                 if i % 1000 == 0:
                     print(f"iteration #{i}")
             depth: int = 0
@@ -343,6 +346,12 @@ class Runner:
         return self.by_swapping_count(to_files(candidate_files(self.src)))
 
     def hill_climbing_with_probabilistic_replacement(self, files: List[str]):
+        """
+        Runs a hill climbing algorithm.
+
+        Repeatedly runs 4 swaps. If any is an improvement, pick the best of them.
+        Alternately, has a 1/20 chance of accepting the swap even if it is not an improvement.
+        """
         state = OptState(files, self.compute_size(files, self.extension))
         with open("output", "a") as output_file:
             while True and state.iterations < self.count:
