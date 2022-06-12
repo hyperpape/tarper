@@ -66,6 +66,7 @@ def test_choose_child():
         path = chosen.path()
         reached["".join(path)] += 1
     assert reached["b"] > reached["a"]
+    assert reached["a"] > 1
 
 
 def test_choose_path():
@@ -74,11 +75,11 @@ def test_choose_path():
     node.update(["a", "c"], 2)
     reached = Counter()
     for i in range(10000):
-        chosen = node.choose_path(2)
-        keys = chosen.parent.children.keys()
-        reached[list(keys)[0]] += 1
-    print(reached)
-    assert reached["b"] > reached["c"]
+        chosen = node.choose_path(5)
+        reached[chosen.key] += 1
+    assert reached["b"] < reached["c"]
+    assert reached["c"] > 1
+    assert reached["b"] > 1
 
 
 def test_weights():

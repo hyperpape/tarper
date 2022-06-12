@@ -20,6 +20,14 @@ class Node:
         self.parent = None
         self.children: DefaultDict[str, Node] = defaultdict(Node)
 
+    def size(self) -> int:
+        size = 0
+        if len(self.children) == 0:
+            return 1
+        for child in self.children.values():
+            size += child.size()
+        return size
+
     def update(self, path: List[str], value) -> None:
         """
         Update the tree for a particular path, and value
@@ -130,3 +138,33 @@ class Node:
         random.shuffle(trailing)
         path_prefix.extend(trailing)
         return path_prefix
+
+    def combined_path(
+        self, files: List[str], path: List[str], forced_depth: int
+    ) -> List[str]:
+        second_path = self.choose_path(5, forced_depth=forced_depth).path()
+        combined_path = []
+        chosen = set()
+        for i, file in enumerate(path):
+            if file in chosen:
+                continue
+            next_file = file
+            combined_path.append(next_file)
+            chosen.add(next_file)
+            if random.randrange(0, 1) < 0.1:
+                follower = self.choose_follower(second_path, chosen, file)
+                if follower and follower not in chosen:
+                    chosen.add(follower)
+                    combined_path.append(follower)
+        if len(combined_path) != len(files):
+            raise ValueError()
+        return combined_path
+
+    def choose_follower(
+        self, second_path: List[str], chosen: set[str], file: str
+    ) -> Optional[str]:
+        for j, second_file in enumerate(second_path):
+            if second_file == file:
+                if j + 1 < len(second_path):
+                    return second_path[j + 1]
+        return None

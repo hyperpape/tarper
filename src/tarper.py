@@ -317,7 +317,7 @@ class Runner:
                 if depth + 3 >= len(files):
                     depth = len(files) - 3
                 node = tree.choose_path(5, forced_depth=depth)
-            path = node.new_path(files, node.path(), depth)
+            path = tree.combined_path(files, node.path(), depth)
             size = self.compute_size(path)
             if size < tree.min:
                 print("new best ", i, size)
@@ -327,15 +327,14 @@ class Runner:
     def initialize_mcts(self, files: List[str]):
         tree = Node()
         tree.update(files, self.compute_size(files))
-        for f in files:
-            for i in range(5):
-                remaining = [file for file in files if file is not f]
-                random.shuffle(remaining)
-                order = [f]
-                order.extend(remaining)
+        for i in range(512):
+            order = files[:]
+            for j in range(5):
+                swap(order)
                 size = self.compute_size(order)
                 tree.update(order, size)
-                return tree
+        print(f"tree size={tree.size()}")
+        return tree
 
     def by_counted_iterations(self) -> List[str]:
         return self.by_swapping_count(to_files(candidate_files(self.src)))
@@ -416,7 +415,6 @@ class ArchiveMethod:
             make_archive(name, files, self.runner.extension)
         except Exception:
             print(files)
-            breakpoint()
 
 
 # usage: tarper.py target_archive source_directory extension iteration_count key
